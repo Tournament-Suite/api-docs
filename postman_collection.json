@@ -1,0 +1,36 @@
+{
+  "info": {
+    "name": "Tournament Suite API",
+    "description": "NOTE: This is a stub file. The full Postman collection is generated on every deploy and exported to this file automatically. Import from https://api.gamertd.com/api/v1/docs/postman_collection.json for the latest version.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.gamertd.com/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "projectId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": []
+}
