@@ -1,166 +1,109 @@
-# Users API
+# Users
 
-Base path: `/api/v1/users`
+Base URL: `https://api.tournamentsuite.com/api/v1`
 
-## Endpoints
+## User Object
 
-### Get current user
-```http
-GET /api/v1/users/me
-Authorization: Bearer <token>
-```
-
-**Response:**
 ```json
 {
-  "id": "user-uuid",
+  "id": "uuid",
+  "email": "player@example.com",
   "username": "player123",
   "displayName": "Player 123",
-  "email": "player@example.com",
-  "avatar": "https://cdn.example.com/avatars/player123.png",
-  "country": "US",
-  "createdAt": "2024-01-15T10:00:00Z",
-  "roles": ["player"]
+  "avatarUrl": "https://cdn.tournamentsuite.com/avatars/player123.png",
+  "emailVerified": true,
+  "role": "player",
+  "createdAt": "2024-01-15T10:00:00Z"
 }
-```
-
-### Get user profile (public)
-```http
-GET /api/v1/users/{userId}
-```
-
-### Update profile
-```http
-PATCH /api/v1/users/me
-Authorization: Bearer <token>
-```
-
-```json
-{
-  "displayName": "Player 123",
-  "bio": "Top-ranked CS2 player.",
-  "country": "US",
-  "socialLinks": {
-    "twitter": "https://twitter.com/player123",
-    "twitch": "https://twitch.tv/player123"
-  }
-}
-```
-
-### Upload avatar
-```http
-POST /api/v1/users/me/avatar
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-```
-
-Field: `file` (JPEG or PNG, max 2 MB)
-
----
-
-## Game Accounts
-
-Base path: `/api/v1/users/me/game-accounts`
-
-### List linked game accounts
-```http
-GET /api/v1/users/me/game-accounts
-Authorization: Bearer <token>
-```
-
-**Response:**
-```json
-[
-  {
-    "game": "cs2",
-    "accountId": "76561198012345678",
-    "username": "player123",
-    "verifiedAt": "2026-01-10T08:00:00Z"
-  }
-]
-```
-
-### Link game account
-```http
-POST /api/v1/users/me/game-accounts
-Authorization: Bearer <token>
-```
-
-```json
-{
-  "game": "cs2",
-  "accountId": "76561198012345678"
-}
-```
-
-Steam accounts are verified via the Steam OpenID flow (`/auth/steam`). Other games use the provider's OAuth or API key verification.
-
-### Unlink game account
-```http
-DELETE /api/v1/users/me/game-accounts/{game}
-Authorization: Bearer <token>
 ```
 
 ---
 
-## Stats
+## Profile
 
-### Get player stats
-```http
-GET /api/v1/users/{userId}/stats
-```
-
-Query params: `game`, `season`, `projectId`
-
-**Response:**
-```json
-{
-  "userId": "user-uuid",
-  "game": "cs2",
-  "stats": {
-    "tournamentsPlayed": 12,
-    "wins": 4,
-    "top3": 7,
-    "earnings": 2500,
-    "currency": "USD",
-    "rating": 1842
-  }
-}
-```
-
-### Get match history
-```http
-GET /api/v1/users/{userId}/matches
-```
-
-Query params: `game`, `tournamentId`, `page`, `limit`
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/users/:id` | Public | Public profile |
+| GET | `/users/me` | JWT | Current user's full profile |
+| PATCH | `/users/me` | JWT | Update profile fields (displayName, bio, country, socialLinks) |
+| GET | `/users/:id/stats/:game` | Public | Per-game stats for a user |
 
 ---
 
 ## Social
 
-### Follow user
-```http
-POST /api/v1/users/{userId}/follow
-Authorization: Bearer <token>
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/users/:id/follow` | JWT | Follow a user |
+| DELETE | `/users/:id/follow` | JWT | Unfollow a user |
+| GET | `/users/:id/followers` | Public | Followers list. Query: `?page` `?limit` |
+| GET | `/users/:id/following` | Public | Following list. Query: `?page` `?limit` |
+| POST | `/users/:id/block` | JWT | Block a user |
+| DELETE | `/users/:id/block` | JWT | Unblock a user |
+| GET | `/users/me/mutual-follows` | JWT | Users who follow you and you follow back |
+
+---
+
+## Leaderboard
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/users/leaderboard` | Public | Global leaderboard. Filters: `?game` `?region` `?page` `?limit` |
+| GET | `/users/leaderboard/game/:gameId` | Public | Game-specific leaderboard |
+
+---
+
+## Career
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/users/me/career` | JWT | Career summary (earnings, tournament count, win rate) |
+| GET | `/users/me/tournament-history` | JWT | Paginated tournament history with placements |
+| GET | `/users/me/achievements` | JWT | Earned achievements and badges |
+
+---
+
+## Game Accounts
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/users/me/game-accounts` | JWT | List linked game accounts |
+| POST | `/users/me/game-accounts` | JWT | Link account. Body: `{ platform: 'steam'|'riot'|'epic', accountId }` |
+| DELETE | `/users/me/game-accounts/:platform` | JWT | Unlink a platform account |
+
+Steam accounts are verified via the Steam OpenID flow (`/auth/steam`). Other platforms use the provider's OAuth or API key verification.
+
+**Linked Account Object:**
+```json
+{
+  "platform": "steam",
+  "accountId": "76561198012345678",
+  "username": "player123",
+  "verifiedAt": "2026-01-10T08:00:00Z"
+}
 ```
 
-### Unfollow user
-```http
-DELETE /api/v1/users/{userId}/follow
-Authorization: Bearer <token>
+---
+
+## Settings
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/users/me/settings` | JWT | Get user settings |
+| PATCH | `/users/me/settings` | JWT | Update settings |
+
+Settings body example:
+```json
+{
+  "notifications": {
+    "email": true,
+    "matchReminders": true,
+    "marketplaceOffers": false
+  },
+  "privacy": {
+    "showEmail": false,
+    "showEarnings": false,
+    "profileVisibility": "public"
+  }
+}
 ```
-
-### Get followers
-```http
-GET /api/v1/users/{userId}/followers
-```
-
-Query params: `page`, `limit`
-
-### Get following
-```http
-GET /api/v1/users/{userId}/following
-```
-
-Query params: `page`, `limit`

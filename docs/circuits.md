@@ -1,8 +1,6 @@
-# Circuits API
+# Circuits
 
-Base path: `/api/v1/projects/{projectId}/circuits`
-
-## Overview
+Base URL: `https://api.tournamentsuite.com/api/v1`
 
 Circuits group multiple tournaments into a season-long competitive series. Points accumulate across events; top qualifiers advance to the circuit final.
 
@@ -15,131 +13,148 @@ Circuits group multiple tournaments into a season-long competitive series. Point
 | Completed | `completed` |
 | Archived | `archived` |
 
-## Endpoints
+---
 
-### List circuits
-```http
-GET /api/v1/projects/{projectId}/circuits
-```
+## Circuit CRUD
 
-Query params: `status`, `game`, `season`, `page`, `limit`
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/circuits` | JWT | Create a circuit |
+| GET | `/circuits` | JWT | List circuits |
+| GET | `/circuits/:id` | JWT | Get single circuit |
+| PUT | `/circuits/:id` | JWT | Update circuit |
+| DELETE | `/circuits/:id` | JWT | Delete circuit (draft only) |
 
-### Create circuit
-```http
-POST /api/v1/projects/{projectId}/circuits
-```
+---
 
-```json
-{
-  "name": "Pro Series Season 3",
-  "game": "cs2",
-  "season": "2026",
-  "description": "Six-event LAN qualifier series leading to the Grand Final.",
-  "pointsScheme": "standard",
-  "qualificationSlots": 8,
-  "startDate": "2026-03-01T00:00:00Z",
-  "endDate": "2026-09-30T23:59:59Z"
-}
-```
+## Discovery (Public)
 
-**Response:**
-```json
-{
-  "id": "circuit-uuid",
-  "name": "Pro Series Season 3",
-  "game": "cs2",
-  "season": "2026",
-  "status": "draft",
-  "pointsScheme": "standard",
-  "qualificationSlots": 8,
-  "createdAt": "2026-06-01T00:00:00Z"
-}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/circuits/popular` | Public | Most-followed active circuits |
+| GET | `/circuits/upcoming` | Public | Circuits starting soon |
+| GET | `/circuits/public/active` | Public | All currently active circuits |
+| GET | `/circuits/public/:id` | Public | Public circuit detail |
 
-### Get circuit
-```http
-GET /api/v1/projects/{projectId}/circuits/{circuitId}
-```
+---
 
-### Update circuit
-```http
-PATCH /api/v1/projects/{projectId}/circuits/{circuitId}
-```
+## Lifecycle
 
-### Delete circuit (draft only)
-```http
-DELETE /api/v1/projects/{projectId}/circuits/{circuitId}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| PUT | `/circuits/:id/status` | JWT | Set circuit status |
+| POST | `/circuits/:id/publish` | JWT | Publish circuit |
+| POST | `/circuits/:id/start` | JWT | Start circuit (activates season) |
+| POST | `/circuits/:id/complete` | JWT | Complete circuit and lock standings |
 
-### Publish circuit
-```http
-POST /api/v1/projects/{projectId}/circuits/{circuitId}/publish
-```
+---
 
-### Add tournament to circuit
-```http
-POST /api/v1/projects/{projectId}/circuits/{circuitId}/events
-```
+## Analytics
 
-```json
-{
-  "tournamentId": "tournament-uuid",
-  "pointsMultiplier": 1.5,
-  "order": 2
-}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/circuits/:id/statistics` | Public | Aggregate statistics (tournaments, participants, prize pools) |
+| GET | `/circuits/:id/analytics` | JWT | Detailed analytics (retention, region breakdown, engagement) |
+| GET | `/circuits/:id/sponsors` | Public | Sponsor list for the circuit |
+| GET | `/circuits/:id/tournaments` | Public | Tournaments included in the circuit |
 
-### Remove tournament from circuit
-```http
-DELETE /api/v1/projects/{projectId}/circuits/{circuitId}/events/{tournamentId}
-```
+---
 
-### Get circuit standings
-```http
-GET /api/v1/projects/{projectId}/circuits/{circuitId}/standings
-```
+## Standings
 
-Query params: `page`, `limit`
+### Circuit Standings
 
-**Response:**
-```json
-{
-  "circuitId": "circuit-uuid",
-  "season": "2026",
-  "updatedAt": "2026-06-22T12:00:00Z",
-  "standings": [
-    {
-      "rank": 1,
-      "participantId": "participant-uuid",
-      "name": "Team Alpha",
-      "points": 1450,
-      "eventsPlayed": 4,
-      "qualified": true
-    }
-  ]
-}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/circuits/:circuitId/standings` | JWT | Full standings. Filters: `?type` `?region` `?page` `?limit` |
+| GET | `/standings/public` | Public | Public-facing circuit standings |
+| GET | `/standings/public/top/:count` | Public | Top N ranked entries |
+| GET | `/standings/search` | Public | Search standings. Query: `?query=` |
+| GET | `/standings/statistics` | JWT | Standings aggregate statistics |
+| GET | `/standings/distribution` | JWT | Points distribution across ranks |
+| GET | `/standings/participant/:participantId` | JWT | Single participant's standing |
+| GET | `/standings/participant/:participantId/history` | JWT | Participant standings history across seasons |
 
-### Get qualified participants
-```http
-GET /api/v1/projects/{projectId}/circuits/{circuitId}/qualified
-```
+---
 
-Returns participants who have secured a qualification slot.
+## Seasons
 
-### Update points scheme
-```http
-PUT /api/v1/projects/{projectId}/circuits/{circuitId}/points-scheme
-```
+Base: `/circuits/:circuitId/seasons`
 
-```json
-{
-  "placements": [
-    { "place": 1, "points": 500 },
-    { "place": 2, "points": 350 },
-    { "place": 3, "points": 250 },
-    { "place": 4, "points": 175 },
-    { "place": 5, "points": 100 }
-  ]
-}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/` | JWT | Create a season |
+| GET | `/` | JWT | List seasons for this circuit |
+| GET | `/:id` | JWT | Get season detail |
+| PUT | `/:id` | JWT | Update season |
+| PUT | `/:id/status` | JWT | Change season status |
+| DELETE | `/:id` | JWT | Delete season (draft only) |
+
+---
+
+## Rankings (v2)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/circuit/v2/rankings` | JWT | Paginated rankings (Range header). Filters: `ranking_ids`, `circuit_ids`, `discipline`, `entity_type`, `season_ids` |
+| GET | `/circuit/v2/rankings/:id` | JWT | Single ranking entry |
+| GET | `/circuit/v2/rankings/circuit/:circuitId/categorized` | JWT | Rankings grouped by category |
+
+Range header pagination: `Range: rankings=0-49` → `Content-Range: rankings 0-49/250`
+
+---
+
+## Regions
+
+Base: `/circuits/:circuitId/regions`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/` | JWT | Create region |
+| GET | `/` | JWT | List regions |
+| GET | `/:id` | JWT | Get region |
+| PUT | `/:id` | JWT | Update region |
+| DELETE | `/:id` | JWT | Delete region |
+
+---
+
+## Tiers
+
+Base: `/circuits/:circuitId/tiers`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/` | JWT | Create tier |
+| GET | `/` | JWT | List tiers |
+| GET | `/:id` | JWT | Get tier |
+| PUT | `/:id` | JWT | Update tier |
+| DELETE | `/:id` | JWT | Delete tier |
+
+---
+
+## Circuit Participants
+
+Base: `/circuits/:circuitId/participants`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/register` | JWT | Register for circuit |
+| GET | `/` | JWT | List participants |
+| GET | `/:id` | JWT | Get participant |
+| GET | `/:id/statistics` | JWT | Participant stats (points per event, wins, top placements) |
+| GET | `/:id/history` | JWT | Event-by-event result history |
+| PUT | `/:id` | Admin | Update participant data |
+| DELETE | `/:id` | Admin | Remove participant |
+| PUT | `/:id/admin/status` | Admin | Override participant status |
+
+---
+
+## Tournament Classification
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/circuit/v2/tournaments/:id/classify` | JWT | Get classification config for a tournament |
+| POST | `/circuit/v2/tournaments/:id/classify` | JWT | Classify tournament into circuit |
+| PATCH | `/circuit/v2/tournaments/:id/classify` | JWT | Update classification |
+| DELETE | `/circuit/v2/tournaments/:id/classify` | JWT | Remove classification |
+| GET | `/circuit/v2/tournaments/circuit/:circuitId/summary` | JWT | Summary of all classified tournaments in a circuit |

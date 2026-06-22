@@ -1,10 +1,8 @@
-# CS2 API
+# CS2
 
-Base path: `/api/v1/projects/{projectId}/cs2`
+Base URL: `https://api.tournamentsuite.com/api/v1`
 
-## Overview
-
-The CS2 API provides fleet management for dedicated servers, automated match lifecycle control, and on-demand rental servers for players. Server provisioning is handled by the `cs2-manager` service; the `cs2-node-agent` daemon runs on each host.
+The CS2 API provides fleet management for dedicated servers, automated match lifecycle control, and on-demand rental servers. Server provisioning is handled by `cs2-manager`; the `cs2-node-agent` daemon runs on each host.
 
 ## Server States
 
@@ -18,150 +16,85 @@ The CS2 API provides fleet management for dedicated servers, automated match lif
 
 ---
 
-## Fleet Management
+## Public Endpoints (no auth)
 
-### List servers
-```http
-GET /api/v1/projects/{projectId}/cs2/servers
-```
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/public/cs2/servers?domain=` | List servers by tenant domain |
+| GET | `/public/cs2/servers/by-project/:projectId` | List servers by project ID |
+| GET | `/cs2/matches/:matchId/stats` | Per-player stats. Query: `?mapIndex=` |
+| GET | `/cs2/matches/:matchId/demos` | Demo files for a match |
+| GET | `/cs2/matches/:matchId/lobby` | Live lobby phase and veto state (JWT required) |
 
-Query params: `status`, `region`, `page`, `limit`
-
-**Response:**
-```json
-[
-  {
-    "id": "server-uuid",
-    "hostname": "cs2-eu-west-01.gamertd.com",
-    "region": "eu-west",
-    "status": "idle",
-    "ip": "185.1.2.3",
-    "port": 27015,
-    "tvPort": 27020,
-    "version": "1.39.7.4",
-    "lastHeartbeat": "2026-06-22T12:59:50Z"
-  }
-]
-```
-
-### Get server
-```http
-GET /api/v1/projects/{projectId}/cs2/servers/{serverId}
-```
-
-### Provision server
-```http
-POST /api/v1/projects/{projectId}/cs2/servers
-```
-
+Server response example:
 ```json
 {
+  "id": "server-uuid",
+  "hostname": "cs2-eu-west-01.tournamentsuite.com",
   "region": "eu-west",
-  "map": "de_mirage",
-  "gameMode": "competitive",
-  "maxRounds": 24,
-  "tickRate": 128,
-  "password": "matchpassword",
-  "rconPassword": "rconpassword"
-}
-```
-
-### Deprovision server
-```http
-DELETE /api/v1/projects/{projectId}/cs2/servers/{serverId}
-```
-
-### Send RCON command
-```http
-POST /api/v1/projects/{projectId}/cs2/servers/{serverId}/rcon
-```
-
-```json
-{
-  "command": "mp_restartgame 3"
-}
-```
-
-**Response:**
-```json
-{
-  "output": "L 06/22/2026 - 13:00:00: World triggered \"Game_Commencing\""
+  "status": "idle",
+  "ip": "185.1.2.3",
+  "port": 27015,
+  "tvPort": 27020,
+  "version": "1.39.7.4",
+  "lastHeartbeat": "2026-06-22T12:59:50Z"
 }
 ```
 
 ---
 
-## Match Automation
+## Project-Scoped Server Management
 
-### Assign server to match
-```http
-POST /api/v1/projects/{projectId}/cs2/servers/{serverId}/assign
-```
+Requires JWT + CS2 entitlement. Base: `/projects/:projectId/cs2/servers`
 
-```json
-{
-  "matchId": "match-uuid",
-  "map": "de_dust2",
-  "team1": {
-    "name": "Team Alpha",
-    "playerSteamIds": ["76561198012345678", "76561198023456789"]
-  },
-  "team2": {
-    "name": "Team Beta",
-    "playerSteamIds": ["76561198034567890", "76561198045678901"]
-  },
-  "cfg": "esl5on5"
-}
-```
+### CRUD & Lifecycle
 
-### Get match server status
-```http
-GET /api/v1/projects/{projectId}/cs2/matches/{matchId}/server
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/` | JWT | Provision server |
+| GET | `/` | JWT | List servers. Filters: `?status` `?region` `?page` `?limit` |
+| GET | `/:id` | JWT | Get server detail |
+| PATCH | `/:id` | JWT | Update server config |
+| DELETE | `/:id` | JWT | Deprovision server |
+| POST | `/:id/start` | JWT | Start server |
+| POST | `/:id/stop` | JWT | Stop server |
+| POST | `/:id/restart` | JWT | Restart server |
+| POST | `/:id/kill` | JWT | Force-kill process |
+| POST | `/:id/reinstall` | JWT | Reinstall server software |
 
-Returns live scoreboard, current map, and round number sourced from the plugin.
+### Operations
 
-### Get demo download URL
-```http
-GET /api/v1/projects/{projectId}/cs2/matches/{matchId}/demo
-```
-
-**Response:**
-```json
-{
-  "url": "https://cdn.example.com/demos/match-uuid.dem.gz",
-  "expiresAt": "2026-06-29T12:00:00Z"
-}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/:id/rcon` | JWT | Send RCON command. Body: `{ command: string }` |
+| POST | `/:id/console/token` | JWT | Get short-lived console WebSocket token |
+| GET | `/:id/files` | JWT | List files on server |
+| GET | `/:id/files/read` | JWT | Read a file. Query: `?path=` |
+| PUT | `/:id/files/write` | JWT | Write a file. Body: `{ path, content }` |
+| POST | `/:id/match` | JWT | Assign match to server |
+| GET | `/:id/demos` | JWT | List demos recorded on this server |
+| GET | `/:id/connect` | JWT | Get connect info (returns `ip:port` and `steam://` URL) |
 
 ---
 
-## Rental Servers
+## Rentals
 
-### List available rental slots
-```http
-GET /api/v1/projects/{projectId}/cs2/rentals/available
-```
+Requires JWT + CS2 entitlement. Base: `/projects/:projectId/cs2/rentals`
 
-Query params: `region`, `map`, `duration`
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/availability` | JWT | Available rental slots. Filters: `?region` `?map` `?duration` |
+| GET | `/` | JWT | List active/past rentals |
+| GET | `/:id` | JWT | Get rental session |
+| POST | `/` | JWT | Start rental. Body: `{ region, map, duration, password?, tickRate? }` |
+| POST | `/:id/stop` | JWT | End rental early |
+| POST | `/:id/extend` | JWT | Extend duration. Body: `{ additionalMinutes }` |
+| POST | `/:id/rcon` | JWT | Send RCON to rental server |
+| GET | `/:id/demos` | JWT | Demos recorded during rental |
+| GET | `/:id/credits` | JWT | Credit usage for this rental |
+| POST | `/:id/credits` | JWT | Add credits to rental |
 
-### Create rental session
-```http
-POST /api/v1/projects/{projectId}/cs2/rentals
-Authorization: Bearer <token>
-```
-
-```json
-{
-  "region": "na-east",
-  "map": "de_inferno",
-  "duration": 60,
-  "password": "mypracticeserver",
-  "tickRate": 128
-}
-```
-
-**Response:**
+Rental start response:
 ```json
 {
   "id": "rental-uuid",
@@ -174,26 +107,40 @@ Authorization: Bearer <token>
 }
 ```
 
-### Get rental session
-```http
-GET /api/v1/projects/{projectId}/cs2/rentals/{rentalId}
-Authorization: Bearer <token>
-```
+---
 
-### Extend rental session
-```http
-POST /api/v1/projects/{projectId}/cs2/rentals/{rentalId}/extend
-Authorization: Bearer <token>
-```
+## API Keys
 
-```json
-{
-  "additionalMinutes": 30
-}
-```
+Requires JWT + CS2 entitlement.
 
-### End rental session
-```http
-DELETE /api/v1/projects/{projectId}/cs2/rentals/{rentalId}
-Authorization: Bearer <token>
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/projects/:projectId/cs2/api-keys` | JWT | List API keys (masked — full key never shown again) |
+| POST | `/projects/:projectId/cs2/api-keys` | JWT | Create key — raw secret returned once |
+| DELETE | `/projects/:projectId/cs2/api-keys/:id` | JWT | Revoke key |
+
+---
+
+## Plugin Webhooks (token-in-URL, internal)
+
+Used by the `cs2-plugin-match` CounterStrikeSharp plugin. Requests are HMAC-SHA256 verified.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/match-plugins/tournamentsuite-match/webhooks/:webhookToken/:event` | Plugin event callback |
+| GET | `/match-plugins/tournamentsuite-match/configs/:serverId/:matchId.json` | Plugin fetches match config |
+
+---
+
+## Companion (token-in-URL, internal)
+
+Used by the `cs2-plugin-companion` plugin for player linking and demo uploads.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/companion/heartbeat/:webhookToken` | Plugin heartbeat |
+| GET | `/companion/admission/:webhookToken?steamId=` | Check if Steam ID is admitted to server |
+| POST | `/companion/link/:webhookToken` | Generate `!link` OTP |
+| GET | `/companion/link/:webhookToken/:steamId` | Verify link OTP |
+| POST | `/companion/demo-uploaded/:webhookToken` | Notify of uploaded demo |
+| POST | `/companion/demo-upload-url/:webhookToken` | Request pre-signed demo upload URL |

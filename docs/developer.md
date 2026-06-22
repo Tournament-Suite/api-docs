@@ -1,86 +1,96 @@
-# Developer API
+# Developer
 
-Base path: `/api/v1/developer`
+Base URL: `https://api.tournamentsuite.com/api/v1`
 
-## Overview
+## Developer Dashboard (JWT, read-only)
 
-The Developer API lets you manage API keys, explore the sandbox environment, inspect rate limit state, and manage webhook subscriptions programmatically. All endpoints require a valid Bearer token with the `developer` role.
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/developer/dashboard/stats` | `{ activeApiKeyCount, requestsLast24h, activeWebhookCount, errorRate }` |
+| GET | `/developer/api-keys` | Masked list of your API keys (across all projects) |
+| GET | `/developer/webhooks` | Webhook subscriptions list |
+| GET | `/developer/webhooks/:id/deliveries` | Delivery history for a webhook |
+| GET | `/developer/sandbox` | Sandbox environment status |
+| GET | `/developer/sandbox/analytics` | Sandbox request analytics |
+| GET | `/developer/api-reference` | Static endpoint catalog grouped by category |
+| GET | `/developer/error-scenarios?errorCode=` | Error code details. Codes: `AUTH_001`, `AUTH_002`, `RATE_001`, `VAL_001`, `NOT_FOUND` |
+| POST | `/developer/generate-code` | Code snippet generator. Body: `{ method, path, language: 'typescript'|'python'|'php'|'curl' }` |
+
+> **Note:** Write operations on `/developer/*` (POST api-keys, webhooks, sandbox) return `503`. Use the project-scoped endpoints below.
 
 ---
 
-## API Keys
+## Project-Scoped API Keys
 
-### List API keys
-```http
-GET /api/v1/developer/keys
-Authorization: Bearer <token>
-```
+Requires JWT + project `OWNER` or `ADMIN` role.
 
-**Response:**
-```json
-[
-  {
-    "id": "key-uuid",
-    "name": "Production Integration",
-    "prefix": "ts_live_k3xA",
-    "scopes": ["tournaments:read", "matches:write", "webhooks:manage"],
-    "createdAt": "2026-01-10T08:00:00Z",
-    "lastUsedAt": "2026-06-22T11:30:00Z",
-    "expiresAt": null
-  }
-]
-```
+Base: `/projects/:projectId/developer/api-keys`
 
-### Create API key
-```http
-POST /api/v1/developer/keys
-Authorization: Bearer <token>
-```
+### ProjectApiKeyDto
 
 ```json
 {
+  "id": "uuid",
   "name": "Production Integration",
+  "keyPrefix": "ts_live_k3xA",
   "scopes": ["tournaments:read", "matches:write", "webhooks:manage"],
+  "createdAt": "2026-01-10T08:00:00Z",
+  "lastUsedAt": "2026-06-22T11:30:00Z",
   "expiresAt": null
 }
 ```
 
-**Response:**
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/` | JWT | List API keys. `keyPrefix` only — secret never shown again |
+| POST | `/` | JWT | Create key. Body: `{ name, scopes: string[], expiresInDays? }` — secret returned exactly once |
+| DELETE | `/:keyId` | JWT | Delete key. Body: `{ reason? }` |
+| POST | `/:keyId/rotate` | JWT | Rotate key → new secret returned once |
+
+Create response (secret shown once):
 ```json
 {
-  "id": "key-uuid",
+  "id": "uuid",
   "name": "Production Integration",
   "key": "ts_live_k3xAbcDefGhIjKlMnOpQrStUvWxYz",
-  "prefix": "ts_live_k3xA",
-  "scopes": ["tournaments:read", "matches:write", "webhooks:manage"],
+  "keyPrefix": "ts_live_k3xA",
+  "scopes": ["tournaments:read", "matches:write"],
   "createdAt": "2026-06-22T12:00:00Z"
 }
 ```
 
-> The full key value is only returned once. Store it securely.
+---
 
-### Rotate API key
-```http
-POST /api/v1/developer/keys/{keyId}/rotate
-Authorization: Bearer <token>
-```
+## Project-Scoped Webhooks
 
-Issues a new secret for the key. The previous secret is invalidated immediately.
+Requires JWT + project `OWNER` or `ADMIN` role.
 
-**Response:**
+Base: `/projects/:projectId/developer/webhooks`
+
+### ProjectWebhookDto
+
 ```json
 {
-  "id": "key-uuid",
-  "key": "ts_live_newSecretValue",
-  "rotatedAt": "2026-06-22T12:05:00Z"
+  "id": "uuid",
+  "name": "Tournament results handler",
+  "url": "https://your-server.com/webhooks/ts",
+  "events": ["tournament.completed", "match.started"],
+  "description": "Handles all tournament and match completion events",
+  "status": "active",
+  "circuitBreakerState": "CLOSED",
+  "consecutiveFailures": 0,
+  "circuitBreakerOpenedAt": null,
+  "createdAt": "2026-06-22T10:00:00Z"
 }
 ```
 
-### Delete API key
-```http
-DELETE /api/v1/developer/keys/{keyId}
-Authorization: Bearer <token>
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/` | JWT | List webhooks |
+| POST | `/` | JWT | Create webhook. Body: `{ name, url, events: string[], description?, secret? }` |
+| PUT | `/:webhookId` | JWT | Update webhook (all fields optional) |
+| DELETE | `/:webhookId` | JWT | Delete webhook |
+| POST | `/:webhookId/test` | JWT | Send test event. Body: `{ eventType? }` |
 
 ---
 
@@ -101,37 +111,7 @@ Authorization: Bearer <token>
 
 ---
 
-## Sandbox
-
-The sandbox environment mirrors production but uses isolated data. Sandbox keys are prefixed `ts_sandbox_`.
-
-### Get sandbox status
-```http
-GET /api/v1/developer/sandbox
-Authorization: Bearer <token>
-```
-
-### Reset sandbox data
-```http
-POST /api/v1/developer/sandbox/reset
-Authorization: Bearer <token>
-```
-
-Resets all tournaments, matches, and participants created in your sandbox project. Irreversible.
-
-### Sandbox base URL
-
-```
-https://api.gamertd.com/api/v1/
-```
-
-Use your `ts_sandbox_` key; all writes are scoped to the sandbox project and never affect live data.
-
----
-
 ## Rate Limits
-
-All API keys are subject to per-minute and per-day request limits. Limits are returned in response headers:
 
 | Header | Description |
 |---|---|
@@ -139,46 +119,22 @@ All API keys are subject to per-minute and per-day request limits. Limits are re
 | `X-RateLimit-Remaining` | Requests remaining this minute |
 | `X-RateLimit-Reset` | Unix timestamp when the window resets |
 
+| Tier | Requests/min |
+|---|---|
+| Standard | 100 |
+| File Upload | 10 |
+| Admin | 200 |
+
 When a limit is exceeded the API returns `429 Too Many Requests`.
-
-### Get current rate limit state
-```http
-GET /api/v1/developer/rate-limits
-Authorization: Bearer <token>
-```
-
-**Response:**
-```json
-{
-  "perMinute": { "limit": 300, "remaining": 287, "resetsAt": "2026-06-22T12:01:00Z" },
-  "perDay": { "limit": 50000, "remaining": 48123, "resetsAt": "2026-06-23T00:00:00Z" }
-}
-```
-
-Default limits by plan:
-
-| Plan | Per Minute | Per Day |
-|---|---|---|
-| Free | 60 | 5,000 |
-| Pro | 300 | 50,000 |
-| Enterprise | 1,000 | 500,000 |
 
 ---
 
-## Webhook Subscriptions
+## Sandbox
 
-Webhook subscriptions can also be managed via the Developer API for cross-project automation. See [webhooks.md](./webhooks.md) for the full event catalog and payload shapes.
+The sandbox environment mirrors production but uses isolated data. Sandbox keys are prefixed `ts_sandbox_`.
 
-### List all subscriptions (all projects)
-```http
-GET /api/v1/developer/webhooks
-Authorization: Bearer <token>
+```
+https://api.tournamentsuite.com/api/v1/sandbox
 ```
 
-### Test delivery
-```http
-POST /api/v1/developer/webhooks/{webhookId}/test
-Authorization: Bearer <token>
-```
-
-Sends a synthetic `ping` event to verify endpoint reachability and signing.
+Use your `ts_sandbox_` key; all writes are scoped to the sandbox project and never affect live data.

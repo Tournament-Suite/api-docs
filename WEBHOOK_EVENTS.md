@@ -15,6 +15,23 @@ Authorization: Bearer <token>
 }
 ```
 
+## Delivery Envelope
+
+Every webhook POST body is wrapped in this envelope:
+
+```json
+{
+  "event": "tournament.completed",
+  "timestamp": "2026-06-22T10:00:00Z",
+  "deliveryId": "uuid",
+  "subscriptionId": "uuid",
+  "aggregateId": "tournament-uuid",
+  "aggregateType": "tournament",
+  "attemptNumber": 1,
+  "data": { "..." }
+}
+```
+
 ## Signature Verification
 
 Every webhook request includes two headers:
@@ -57,11 +74,19 @@ function verifySignature(
 | `OPEN` | Endpoint failing — delivery paused, retried after backoff |
 | `HALF_OPEN` | Test delivery sent; success → CLOSED, failure → OPEN |
 
+Circuit breaker fields on the subscription object:
+
+| Field | Type | Description |
+|---|---|---|
+| `circuitBreakerState` | `CLOSED` \| `OPEN` \| `HALF_OPEN` | Current state |
+| `consecutiveFailures` | number | Failures since last success |
+| `circuitBreakerOpenedAt` | ISO 8601 or null | When circuit opened |
+
 Retries: exponential backoff, up to 72 hours. Max 10 attempts per event.
 
 ---
 
-## Event Reference
+## Event Reference (32 event types)
 
 ### Tournament Events
 

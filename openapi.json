@@ -3,11 +3,11 @@
   "info": {
     "title": "Tournament Suite API",
     "version": "2.0.0",
-    "description": "NOTE: This is a stub file. The full OpenAPI specification is generated on every deploy from the live NestJS service and published to https://api.gamertd.com/api/v1/docs/openapi.json"
+    "description": "Official OpenAPI 3.0 specification for Tournament Suite API v2.0.0. The full machine-readable spec is exported from the live API on every deploy. Base URL: https://api.tournamentsuite.com/api/v1"
   },
   "servers": [
     {
-      "url": "https://api.gamertd.com/api/v1",
+      "url": "https://api.tournamentsuite.com/api/v1",
       "description": "Production"
     }
   ],

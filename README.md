@@ -7,7 +7,7 @@ Official API documentation for the [Tournament Suite](https://tournamentsuite.co
 | Environment | URL |
 |---|---|
 | Production | `https://api.tournamentsuite.com/api/v1` |
-| Staging | `https://api.gamertd.com/api/v1` |
+| Staging | `https://api.tournamentsuite.com/api/v1` |
 | Sandbox | `https://api.tournamentsuite.com/api/v1/sandbox` |
 
 ## Authentication
@@ -44,17 +44,19 @@ const tournaments = await client.tournaments.list({ projectId: 'YOUR_PROJECT_ID'
 | Domain | Description |
 |---|---|
 | [Tournaments](docs/tournaments.md) | Create, manage, and track tournaments |
-| [Matches](docs/matches.md) | Match lifecycle, scoring, and disputes |
+| [Matches](docs/matches.md) | Match lifecycle, scoring, bracket, seeding |
 | [Participants](docs/participants.md) | Registration, check-in, elimination |
 | [Circuits](docs/circuits.md) | Multi-event circuits and season standings |
 | [Users](docs/users.md) | Player profiles, stats, social |
 | [Webhooks](docs/webhooks.md) | Subscribe to platform events |
 | [CS2](docs/cs2.md) | CS2 server fleet, match automation |
 | [Developer](docs/developer.md) | API keys, sandbox, rate limits |
+| [Matchmaking](docs/matchmaking.md) | Skill-based queue system |
+| [Marketplace](docs/marketplace.md) | Item listings, purchases, reviews |
 
 ## Webhook Events
 
-→ [WEBHOOK_EVENTS.md](WEBHOOK_EVENTS.md) — all 34 event types with payload shapes and HMAC verification
+→ [WEBHOOK_EVENTS.md](WEBHOOK_EVENTS.md) — all 32 event types with payload shapes and HMAC verification
 
 → [webhook-examples](https://github.com/Tournament-Suite/webhook-examples) — copy-paste handlers in Node, Python, Go, PHP
 
@@ -70,10 +72,9 @@ Interactive docs: [api.tournamentsuite.com/api/docs](https://api.tournamentsuite
 
 | Tier | Requests/min |
 |---|---|
-| Sandbox | 30 |
-| Community | 120 |
-| Circuit | 600 |
-| Arena | 2000 |
+| Standard | 100 |
+| File Upload | 10 |
+| Admin | 200 |
 
 Rate limit headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
 
